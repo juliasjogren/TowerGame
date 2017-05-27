@@ -2,9 +2,9 @@ let enemies = [];
 let checkpoints = [];
 let towers = [];
 
-let g = hexi(900, 600, setup);
+let g = hexi(800, 600, setup);
 
-// g.scaleToWindow();
+g.scaleToWindow();
 g.backgroundColor = '#004d00';
 
 function setup(){
