@@ -1,0 +1,53 @@
+* {
+    margin: 0 auto;
+    padding: 0;
+}
+
+html {
+    background: #80dfff;
+}
+
+body {    
+    margin-left: 20%;
+    margin-right: 20%;
+}
+
+header {
+    background: #dfff80;
+    padding: 20px;
+    text-align: center;
+}
+
+footer {
+    background: #ff8000;
+    height: 30px;
+}
+
+.nav {
+    background: #ff8000;
+    padding-left: 20px;
+    border-top: 2px solid black;
+    border-bottom: 2px solid black;
+}
+
+.nav table {
+    width: 100%;
+    text-align: center;
+}
+
+.games {
+    background: #dfff80;
+    height: 400px;
+}
+
+.games table {
+    width: 100%;
+    text-align: center;
+}
+.games table * {
+    border: 1px solid black;
+}
+
+canvas {
+    position: relative;
+}
