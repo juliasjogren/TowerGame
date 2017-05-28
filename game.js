@@ -1,8 +1,14 @@
+let score = 0;
+let lives = 50;
+
 let enemies = [];
 let checkpoints = [];
 let towers = [];
 
-let g = hexi(800, 600, setup);
+let gameWidth = document.documentElement.clientWidth;
+let gameHeight = document.documentElement.clientHeight;
+
+let g = hexi(gameWidth, gameHeight, setup);
 
 g.scaleToWindow();
 g.backgroundColor = '#004d00';
@@ -23,11 +29,13 @@ function setup(){
             spawnInterval -= 100;
     }
 
-    checkpoints.push(new Checkpoint(0,50));
-    checkpoints.push(new Checkpoint(550,50));
-    checkpoints.push(new Checkpoint(100,350));
-    checkpoints.push(new Checkpoint(700,250));
-    checkpoints.push(new Checkpoint(550,550));
+    checkpoints.push(new Checkpoint(300,200))
+    checkpoints.push(new Checkpoint(650,100));
+    checkpoints.push(new Checkpoint(250,550));
+    checkpoints.push(new Checkpoint(1000,200));
+    checkpoints.push(new Checkpoint(550,600));
+    checkpoints.push(new Checkpoint(1100,600));
+   
 
     drawLineBetweenCheckpoints(checkpoints);
 
@@ -43,24 +51,39 @@ g.pointer.tap = () => {
 
     console.log('click at (', x, y, ')');
 
-    let tower = new Tower(x, y);
+    let tower = new BombTower(x, y);
     towers.push(tower);
 }
 
 
 g.start();
 
+function BombTower(x, y){
 
-function Tower(x, y){
+    let fireRate = 500;
+    let health = 500;
+    let range = 250;
+    let size = 25;
 
-    let tower = g.circle(25, 'blue', 'black', 2, x-25/2, y-25/2);
-    tower.range = g.circle(250, 'black', 'red', 5);
+
+    let tower = Tower(x, y, size, range, health, fireRate);
+
+    return tower;
+
+
+}
+
+function Tower(x, y, size, range, health, fireRate){
+
+    let tower = g.circle(size, 'blue', 'black', 2, x-size/2, y-size/2);
+    tower.range = g.circle(range, 'black', 'red', 5);
     tower.putCenter(tower.range);
     tower.range.alpha = 0.1;
     tower.bullets = [];
     tower.targets = [];
-    tower.cooldown = 500;
+    tower.fireRate = fireRate;
     tower.lastShotTime = 0;
+    tower.health = health;
 
     tower.selectTarget = function(){
 
@@ -79,7 +102,7 @@ function Tower(x, y){
 
     tower.shoot = function(enemy){
         let now = new Date();
-        if( tower.lastShotTime + tower.cooldown <= now.getTime()){
+        if( tower.lastShotTime + tower.fireRate <= now.getTime()){
             tower.lastShotTime = now.getTime();
             let angle = g.angle(this, enemy);
             let speed = 10;
@@ -110,10 +133,11 @@ function drawLineBetweenCheckpoints(checkpoints){
 
     checkpoints.forEach( checkpoint => {
         
-        let checkpointMarker = g.circle(52, '#CC9966', 'black', 0, checkpoint.x - 26, checkpoint.y - 26);
+        let checkpointMarker = g.circle(102, '#CC9966', 'black', 0, checkpoint.x - 51, checkpoint.y - 51);
+
 
         if(prevCheckpoint != null){
-            g.line('#CC9966', 50, checkpoint.x, checkpoint.y, prevCheckpoint.x, prevCheckpoint.y);
+            g.line('#CC9966', 100, checkpoint.x, checkpoint.y, prevCheckpoint.x, prevCheckpoint.y);
         }
         prevCheckpoint = checkpoint;
     });
@@ -125,6 +149,18 @@ function Enemy(x, y){
     y = checkpoints[0].y;
 
     let enemy = g.circle(15, "pink", "purple", 5, x, y);
+
+    let healthBar = g.rectangle(75, 10, "black");
+    enemy.healthBar = healthBar;
+    enemy.addChild(healthBar);
+    enemy.putTop(healthBar);
+    healthBar.y -= 10;
+    
+    let inner = g.rectangle(75, 10, "green");
+    healthBar.inner = inner;
+    healthBar.addChild(inner);
+
+    
 
     enemy.hp = 15;
     enemy.target = checkpoints[1];
@@ -155,7 +191,7 @@ function play(){
             let nextTarget = checkpoints[checkpointIndex + 1];
             if(!nextTarget){
                 g.remove(enemy);
-                console.log('Life lost?')
+                lives--;
                 return false;
             } else {
                 enemy.target = nextTarget;
@@ -173,6 +209,7 @@ function play(){
                 if(g.hit(enemy, bullet)){
                     if(enemy.hp > 1) {
                         // console.log('Enemy hit hp', enemy.hp)
+                        enemy.healthBar.inner.width -= 10;
                         enemy.hp--;
                     } else {11
                         try{
@@ -195,6 +232,7 @@ function play(){
                 return true
             })
         })
+        if(!isAlive) score += 50;
         return isAlive
     })
 }

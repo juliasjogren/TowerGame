@@ -8,10 +8,68 @@ html {
 }
 
 body {
-    /*margin-left: 20%;
-    margin-right: 20%;*/
+    height: 100%;
+    overflow: hidden;
+   
 }
 
-/*canvas {
+canvas {
     position: relative;
-}*/
+}
+
+#ui{ 
+    position : absolute;
+    left : 0;
+    top : 0;
+    width : 100%;
+    height : 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  #ui table{
+      width: 100%;
+      padding: 10px;
+  }
+
+  #ui table tr{
+      text-align: center;
+      height: 75px;
+      background-color: beige;
+
+  }
+
+  #left {
+      background: green;
+      height: 100%;
+      width: 10%;
+      float: left;
+      pointer-events: all;
+  }
+
+  #right {
+      background: green;
+      height: 100%;
+      width: 10%;
+      float: right;
+      pointer-events: all;
+  }
+
+  #top{
+      position: absolute;
+      background: green;
+      height: 5%;
+      width: 80%;
+      left: 10%;
+    
+  }
+
+  #bottom{
+      position: absolute;
+      background: green;
+      height: 5%;
+      width: 80%;
+      left: 10%;
+      bottom: 0;
+    
+  }
