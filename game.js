@@ -1,9 +1,107 @@
 let score = 0;
 let lives = 50;
 
+let spawner = [];
 let enemies = [];
 let checkpoints = [];
-let towers = [];
+let activeTowers = [];
+
+let towers = {
+    BombTower: {
+        fireRate: 1500, health: 1000, range: 250, size: 40, damage: 500, color: "LawnGreen",
+        shoot: function(angle){
+            g.shoot(this, 
+                    angle,
+                    this.halfWidth,
+                    this.halfHeight,
+                    g.stage,
+                    7,
+                    this.bullets,
+                    () => g.circle(40, 'green')
+            );
+        },
+        description: 'Bomb tower, blow your enemies brains out'
+    },
+    FireWall: {
+        fireRate: 250, health: 1500, range: 150, size: 20, damage: 50, color: "OrangeRed",
+        shoot: function(angle){
+            g.shoot(this, 
+                    angle,
+                    this.halfWidth,
+                    this.halfHeight,
+                    g.stage,
+                    2,
+                    this.bullets,
+                    () => g.circle(10, 'red')
+            );
+            g.shoot(this, 
+                    angle + 0.25,
+                    this.halfWidth,
+                    this.halfHeight,
+                    g.stage,
+                    2,
+                    this.bullets,
+                    () => g.circle(10, 'red')
+            );
+            g.shoot(this, 
+                    angle - 0.25,
+                    this.halfWidth,
+                    this.halfHeight,
+                    g.stage,
+                    2,
+                    this.bullets,
+                    () => g.circle(10, 'red')
+            );
+        },
+        description: 'burn your enemies to their death'
+    }
+};
+
+let selectedTower = towers.BombTower;
+
+let htmlTowerList = document.getElementById('towerList');
+let htmlTowerTitle = document.getElementById('towerTitle');
+
+htmlTowerTitle.onclick = function(){
+    let towerTable = htmlTowerList.children[0].children;
+    for(let i = 0; i < towerTable.length; i++){
+        let descriptionCell = towerTable.item(i).children[1];
+        descriptionCell.classList.toggle('hidden');
+       console.log(descriptionCell)
+    }
+}
+
+for(key in towers){
+    makeTowerRow(key, towers[key]);
+}
+
+function makeTowerRow(name, tower){
+
+    name = name.split(/(?=[A-Z])/).join(" ");
+
+    let row = htmlTowerList.insertRow();
+
+    let cell1 = row.insertCell(0);
+    let title = document.createElement('h3');
+    title.appendChild(document.createTextNode(name));
+    cell1.appendChild(title);
+    let image = document.createElement('img');
+    image.width = 50;
+    image.height = 50;
+    cell1.appendChild(image);
+
+    let cell2 = row.insertCell(1);
+    let description = document.createElement('p');
+    description.appendChild(document.createTextNode(tower.description));
+    cell2.appendChild(description);
+    cell2.classList.toggle('hidden');
+
+    row.tower = tower;
+
+    row.onclick = function(){
+        selectedTower = tower;
+    }
+}
 
 let gameWidth = document.documentElement.clientWidth;
 let gameHeight = document.documentElement.clientHeight;
@@ -15,18 +113,15 @@ g.backgroundColor = '#004d00';
 
 function setup(){
     console.log('Starting setup');
-    let spawnInterval = 2500;
+    let spawnInterval = 700;
     
     let spawnEnemies = function(){
 
-        enemies.push(new Enemy());
+        spawner.push(Enemy);
+        spawner.push(Enemy);
 
-        // uh detta gick visst å göra på två sätt ^^
         g.wait(spawnInterval, spawnEnemies);
-        // g.wait(spawnInterval, () => spawnEnemies());
 
-        if(spawnInterval > 200)
-            spawnInterval -= 100;
     }
 
     checkpoints.push(new Checkpoint(300,200))
@@ -49,41 +144,48 @@ g.pointer.tap = () => {
     let x = g.pointer.x;
     let y = g.pointer.y;
 
-    console.log('click at (', x, y, ')');
-
-    let tower = new BombTower(x, y);
-    towers.push(tower);
+    let tower = new Tower(x, y);
+    activeTowers.push(tower);
 }
 
 
 g.start();
 
-function BombTower(x, y){
-
-    let fireRate = 500;
-    let health = 500;
-    let range = 250;
-    let size = 25;
-
-
-    let tower = Tower(x, y, size, range, health, fireRate);
-
-    return tower;
-
-
+function Cooldown(delay){
+    let lastTime = 0;
+    this.isReady = function (){
+        let now = new Date().getTime();
+        if( lastTime + delay <= now){
+            lastTime = now;
+            return true;
+        }
+        return false;
+    }
 }
 
-function Tower(x, y, size, range, health, fireRate){
 
-    let tower = g.circle(size, 'blue', 'black', 2, x-size/2, y-size/2);
-    tower.range = g.circle(range, 'black', 'red', 5);
+
+
+function Tower(x, y){
+
+    
+    let tower = g.circle(selectedTower.size, selectedTower.color, 'black', 2, x-selectedTower.size/2, y-selectedTower.size/2);
+    tower.range = createRange(selectedTower.range); 
     tower.putCenter(tower.range);
-    tower.range.alpha = 0.1;
     tower.bullets = [];
     tower.targets = [];
-    tower.fireRate = fireRate;
-    tower.lastShotTime = 0;
-    tower.health = health;
+  
+    g.wait(2500, () => { tower.range.visible = false})
+
+    tower.shotCooldown = new Cooldown(selectedTower.fireRate);
+    tower.maxHealth = selectedTower.health;
+    tower.health = selectedTower.health;
+    tower.type = "tower";
+    tower.damage = selectedTower.damage;
+    tower.newShoot = selectedTower.shoot;
+
+    addHealthBar(tower, 40, 5, "green");
+
 
     tower.selectTarget = function(){
 
@@ -100,30 +202,40 @@ function Tower(x, y, size, range, health, fireRate){
         tower.targets = [];
     }
 
+
+
     tower.shoot = function(enemy){
-        let now = new Date();
-        if( tower.lastShotTime + tower.fireRate <= now.getTime()){
-            tower.lastShotTime = now.getTime();
+     
+        if( tower.shotCooldown.isReady()){
             let angle = g.angle(this, enemy);
             let speed = 10;
 
-            g.shoot(tower, 
-                    angle,
-                    tower.halfWidth,
-                    tower.halfHeight,
-                    g.stage,
-                    speed,
-                    tower.bullets,
-                    () => g.circle(10, 'red', 'black', 2)
-                );
+            tower.newShoot(angle);
         }    
     }
+
+    tower.play = function() {
+
+        tower.healthBar.update();
+
+        tower.bullets = tower.bullets.filter( bullet => {
+            if(g.distance(tower, bullet) > tower.range){
+                g.remove(bullet);
+                return false;
+            }
+            g.move(bullet);
+            return true;
+        })
+    }
+
+    
     return tower;
 }
 
 function Checkpoint(x, y){
     let checkpoint = g.circle(0, 'black', 'black', 0, x, y);
     checkpoint.setPivot(0.5, 0.5);
+    checkpoint.type = 'checkpoint';
 
     return checkpoint;
 }
@@ -143,6 +255,31 @@ function drawLineBetweenCheckpoints(checkpoints){
     });
 }
 
+function HealthBar(w, h, color) {
+
+    let healthBar = g.rectangle(w, h, "black");
+    
+    let inner = g.rectangle(w, h, color);
+    healthBar.inner = inner;
+    healthBar.addChild(inner);
+
+    return healthBar;
+}
+
+function addHealthBar(obj, w, h, color){
+    let healthBar = new HealthBar(w, h, color);
+
+    obj.healthBar = healthBar;
+    obj.addChild(healthBar);
+    obj.putTop(healthBar);
+
+    
+    healthBar.update = function(){
+        let healthPercent = obj.health/obj.maxHealth;
+        obj.healthBar.inner.width = obj.healthBar.width * healthPercent;
+    } 
+}
+
 function Enemy(x, y){
     
     x = checkpoints[0].x;
@@ -150,56 +287,90 @@ function Enemy(x, y){
 
     let enemy = g.circle(15, "pink", "purple", 5, x, y);
 
-    let healthBar = g.rectangle(75, 10, "black");
-    enemy.healthBar = healthBar;
-    enemy.addChild(healthBar);
-    enemy.putTop(healthBar);
-    healthBar.y -= 10;
-    
-    let inner = g.rectangle(75, 10, "green");
-    healthBar.inner = inner;
-    healthBar.addChild(inner);
+    addHealthBar(enemy, 40, 5, "red");
 
-    
-
-    enemy.hp = 15;
+    enemy.speed = 2;
+    enemy.health = 800;
+    enemy.maxHealth = 800;
     enemy.target = checkpoints[1];
+    enemy.currentCheckpoint = 1;
+    enemy.type = 'enemy';
+    enemy.range = g.circle(30, "")
+    enemy.cooldown = new Cooldown(500);
+    enemy.damage = 10;
+
+    enemy.hitTower = function(tower) {
+        if(enemy.cooldown.isReady())
+            tower.health -= enemy.damage;
+
+        if(tower.health <= 0){
+            enemy.target = checkpoints[enemy.currentCheckpoint];
+        }
+    }
+
+    enemy.play = function() {
+
+        activeTowers.forEach(tower => {
+            if(g.hit(enemy, tower) && enemy.target != tower){
+                
+                    enemy.target = tower;
+            }
+        })
+
+        let isAlive = true;
+
+        let targetReached = g.hit(enemy, enemy.target);
+        if(targetReached){
+           
+            if(enemy.target.type === "checkpoint"){
+                let nextTarget = checkpoints[enemy.currentCheckpoint + 1];
+                if(!nextTarget){
+                    isAlive = false;
+                    lives--;
+                } else {
+                    enemy.currentCheckpoint++;
+                    enemy.target = nextTarget;
+                }
+            } else {
+                enemy.hitTower(enemy.target);
+            }
+        } else {
+            g.followConstant(enemy, enemy.target, enemy.speed);
+        }
+        return isAlive;    
+    }
+        
+
 
     return enemy;
 }
 
 function play(){
-    for(let i in towers){
-        let tower = towers[i];
-        tower.bullets = tower.bullets.filter( bullet => {
-            if(g.distance(tower, bullet) > tower.range){
-                g.remove(bullet);
+
+    SpawnEnemy();
+
+    activeTowers = activeTowers.filter(tower => {
+        if(tower.health <= 0){
+            tower.bullets = tower.bullets.filter(b => {
+                g.remove(b);
                 return false;
-            }
-            g.move(bullet);
-            return true;
-        })
-    }
-    g.multipleCircleCollision(enemies, true);
+            });
+            activeTowers.slice(activeTowers.indexOf(tower));
+            g.remove(tower);
+        } 
+        return tower.health > 0;
+    });
+
+    activeTowers.map(tower => tower.play());
+
+    checkEnemyCollision();
+
     enemies = enemies.filter(enemy => {
         if(!enemy) return console.log('enemy null')
-        g.contain(enemy, g.stage, true)
-        let speed = 2;
-        let checkpointReached = g.hit(enemy, enemy.target);
-        if(checkpointReached){
-            let checkpointIndex = checkpoints.indexOf(enemy.target);
-            let nextTarget = checkpoints[checkpointIndex + 1];
-            if(!nextTarget){
-                g.remove(enemy);
-                lives--;
-                return false;
-            } else {
-                enemy.target = nextTarget;
-            }
-        }
-        g.followConstant(enemy, enemy.target, speed);
-        let isAlive = true
-        towers.forEach(tower => {
+        
+        let isAlive = enemy.play();
+       
+        activeTowers.forEach(tower => {
             if(g.hit(tower.range, enemy)){
 
                 tower.targets.push(enemy);
@@ -207,32 +378,69 @@ function play(){
             tower.selectTarget();
             tower.bullets = tower.bullets.filter(bullet => {
                 if(g.hit(enemy, bullet)){
-                    if(enemy.hp > 1) {
-                        // console.log('Enemy hit hp', enemy.hp)
-                        enemy.healthBar.inner.width -= 10;
-                        enemy.hp--;
-                    } else {11
-                        try{
-                            g.remove(enemy)
-                        }catch(error){
-                            console.log("g remove enemy error")
-                        }
+                    enemy.health -= tower.damage;
+
+                    if(enemy.health > 0) {
+                        enemy.healthBar.update();
+                    } else {
                         isAlive = false
-                    }                    
-                    // g.remove(bullet)
-                    // return false
+                    }
+                    g.remove(bullet);
+
+                    return false;
                 }
 
                 // if(!g.hit(tower.range, bullet)){
                 // if(!g.hit(g.stage, bullet)){
-                if(g.distance(tower, bullet) > tower.range.radius * 2){
+                if(g.distance(tower, bullet) > tower.range.radius){
                     g.remove(bullet)
                     return false
                 }
                 return true
             })
         })
-        if(!isAlive) score += 50;
+        if(!isAlive){
+            try{
+                g.remove(enemy)
+            }catch(error){
+                console.log("g remove enemy error")
+            }
+            score += 50;
+        } 
         return isAlive
     })
+}
+
+function checkEnemyCollision(){
+    for(let i = 0; i < enemies.length; i++) {
+        let e1 = enemies[i];
+
+        for(let j = i+1; j < enemies.length; j++) {
+            let e2 = enemies[j];
+
+            if(g.hit(e1, e2)){
+                g.circleCollision(e2, e1);
+            }
+        }
+    }
+}
+function createRange(range){
+    let r = g.circle(range, 'black');
+    r.alpha = 0.1;
+
+    return r;
+    
+}
+
+function SpawnEnemy(){
+
+    if(spawner.length > 0){
+
+        let x = spawner.shift();
+
+        let enemy = new x();
+
+        enemies.push(enemy);
+
+    }
 }

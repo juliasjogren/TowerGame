@@ -45,6 +45,13 @@ canvas {
       width: 10%;
       float: left;
       pointer-events: all;
+      text-align: center;
+  }
+
+  #left h2{
+      background: beige;
+      margin: 10px;
+      padding: 10px;
   }
 
   #right {
@@ -53,6 +60,17 @@ canvas {
       width: 10%;
       float: right;
       pointer-events: all;
+      text-align: center;
+  }
+
+  #right h2{
+      background: beige;
+      margin: 10px;
+      padding: 10px;
+  }
+
+  #right #hidden {
+      display: none;
   }
 
   #top{
