@@ -1,127 +1,66 @@
+let gui = new GUI();
+
+// Globals
 let score = 0;
-let lives = 50;
+let lives = 10;
+let gold = 1000;
 
 let spawner = [];
 let enemies = [];
 let checkpoints = [];
 let activeTowers = [];
 
+// DB
 let towers = {
     BombTower: {
-        fireRate: 1500, health: 1000, range: 250, size: 40, damage: 500, color: "LawnGreen",
-        shoot: function(angle){
-            g.shoot(this, 
-                    angle,
-                    this.halfWidth,
-                    this.halfHeight,
-                    g.stage,
-                    7,
-                    this.bullets,
-                    () => g.circle(40, 'green')
-            );
-        },
-        description: 'Bomb tower, blow your enemies brains out'
+        fireRate: 1500, health: 700, range: 250, size: 40, damage: 500, color: "LawnGreen", price: 350,
+        description: 'Blow your enemies brains out'
     },
     FireWall: {
-        fireRate: 250, health: 1500, range: 150, size: 20, damage: 50, color: "OrangeRed",
-        shoot: function(angle){
-            g.shoot(this, 
-                    angle,
-                    this.halfWidth,
-                    this.halfHeight,
-                    g.stage,
-                    2,
-                    this.bullets,
-                    () => g.circle(10, 'red')
-            );
-            g.shoot(this, 
-                    angle + 0.25,
-                    this.halfWidth,
-                    this.halfHeight,
-                    g.stage,
-                    2,
-                    this.bullets,
-                    () => g.circle(10, 'red')
-            );
-            g.shoot(this, 
-                    angle - 0.25,
-                    this.halfWidth,
-                    this.halfHeight,
-                    g.stage,
-                    2,
-                    this.bullets,
-                    () => g.circle(10, 'red')
-            );
-        },
-        description: 'burn your enemies to their death'
+        fireRate: 250, health: 1000, range: 150, size: 20, damage: 50, color: "OrangeRed", price: 300,
+        description: 'Burn your enemies to their death'
+    },
+    ArrowTower: {
+        fireRate: 50, health: 50, range: 50, size: 10, damage: 50, color: "blue", price: 50,
+        description: 'uuuuu'
     }
 };
 
-let selectedTower = towers.BombTower;
+let selectedTower;
 
-let htmlTowerList = document.getElementById('towerList');
-let htmlTowerTitle = document.getElementById('towerTitle');
+let htmlStatus = document.getElementById("status");
 
-htmlTowerTitle.onclick = function(){
-    let towerTable = htmlTowerList.children[0].children;
-    for(let i = 0; i < towerTable.length; i++){
-        let descriptionCell = towerTable.item(i).children[1];
-        descriptionCell.classList.toggle('hidden');
-       console.log(descriptionCell)
-    }
+function statusLog(...messages){
+    htmlStatus.innerHTML = messages.join(' ');
+    setTimeout(htmlStatus.innerHTML = '', 5000);
 }
 
-for(key in towers){
-    makeTowerRow(key, towers[key]);
-}
-
-function makeTowerRow(name, tower){
-
-    name = name.split(/(?=[A-Z])/).join(" ");
-
-    let row = htmlTowerList.insertRow();
-
-    let cell1 = row.insertCell(0);
-    let title = document.createElement('h3');
-    title.appendChild(document.createTextNode(name));
-    cell1.appendChild(title);
-    let image = document.createElement('img');
-    image.width = 50;
-    image.height = 50;
-    cell1.appendChild(image);
-
-    let cell2 = row.insertCell(1);
-    let description = document.createElement('p');
-    description.appendChild(document.createTextNode(tower.description));
-    cell2.appendChild(description);
-    cell2.classList.toggle('hidden');
-
-    row.tower = tower;
-
-    row.onclick = function(){
-        selectedTower = tower;
-    }
-}
+statusLog('Starting!')
 
 let gameWidth = document.documentElement.clientWidth;
 let gameHeight = document.documentElement.clientHeight;
 
 let g = hexi(gameWidth, gameHeight, setup);
 
-g.scaleToWindow();
-g.backgroundColor = '#004d00';
-
 function setup(){
     console.log('Starting setup');
+    g.scaleToWindow();
+    g.backgroundColor = '#004d00';
+
     let spawnInterval = 700;
-    
     let spawnEnemies = function(){
-
-        spawner.push(Enemy);
-        spawner.push(Enemy);
-
+        if(spawner.length < 10){
+            spawner.push(Enemy);
+            spawner.push(Enemy);
+        }
         g.wait(spawnInterval, spawnEnemies);
+    }
+    
+    gui.setPauseCallback(pause);
 
+    for(key in towers){
+        console.log(key)
+        gui.makeTowerRow(key, towers[key]);
     }
 
     checkpoints.push(new Checkpoint(300,200))
@@ -144,93 +83,36 @@ g.pointer.tap = () => {
     let x = g.pointer.x;
     let y = g.pointer.y;
 
-    let tower = new Tower(x, y);
-    activeTowers.push(tower);
+    buildTower(x, y);
 }
 
+function buildTower(x, y){
+    if(!selectedTower) return statusLog('No tower selected.');
+    if(gold < selectedTower.price) return statusLog('Not enough gold.');
+
+    let tower = new Tower(x, y, selectedTower);
+    //let circle = g.circle(selectedTower.size, selectedTower.color, 'black', 2, x-selectedTower.size/2, y-selectedTower.size/2);
+    //let tower = new Tower(x, y, selectedTower, circle);
+
+    if(hitStartOrTower(tower)){
+        statusLog('Bad placement.')
+        g.remove(tower);
+    } else {
+        activeTowers.push(tower);
+        gold -= selectedTower.price;
+    }    
+}
+
+function hitStartOrTower(tower){
+    if(g.hit(tower, checkpoints[0], true)) return true;
+
+    for(let t of activeTowers)
+        if(g.hit(tower, t, true)) return true;
+
+    return false;
+}
 
 g.start();
-
-function Cooldown(delay){
-    let lastTime = 0;
-    this.isReady = function (){
-        let now = new Date().getTime();
-        if( lastTime + delay <= now){
-            lastTime = now;
-            return true;
-        }
-        return false;
-    }
-}
-
-
-
-
-function Tower(x, y){
-
-    
-    let tower = g.circle(selectedTower.size, selectedTower.color, 'black', 2, x-selectedTower.size/2, y-selectedTower.size/2);
-    tower.range = createRange(selectedTower.range); 
-    tower.putCenter(tower.range);
-    tower.bullets = [];
-    tower.targets = [];
-  
-    g.wait(2500, () => { tower.range.visible = false})
-
-    tower.shotCooldown = new Cooldown(selectedTower.fireRate);
-    tower.maxHealth = selectedTower.health;
-    tower.health = selectedTower.health;
-    tower.type = "tower";
-    tower.damage = selectedTower.damage;
-    tower.newShoot = selectedTower.shoot;
-
-    addHealthBar(tower, 40, 5, "green");
-
-
-    tower.selectTarget = function(){
-
-        let target = tower.targets[0];
-
-        if(target != null){
-            for(let i in tower.targets){
-
-                // console.log(i);
-            }
-            tower.shoot(target);
-        }
-
-        tower.targets = [];
-    }
-
-
-
-    tower.shoot = function(enemy){
-     
-        if( tower.shotCooldown.isReady()){
-            let angle = g.angle(this, enemy);
-            let speed = 10;
-
-            tower.newShoot(angle);
-        }    
-    }
-
-    tower.play = function() {
-
-        tower.healthBar.update();
-
-        tower.bullets = tower.bullets.filter( bullet => {
-            if(g.distance(tower, bullet) > tower.range){
-                g.remove(bullet);
-                return false;
-            }
-            g.move(bullet);
-            return true;
-        })
-    }
-
-    
-    return tower;
-}
 
 function Checkpoint(x, y){
     let checkpoint = g.circle(0, 'black', 'black', 0, x, y);
@@ -255,30 +137,7 @@ function drawLineBetweenCheckpoints(checkpoints){
     });
 }
 
-function HealthBar(w, h, color) {
 
-    let healthBar = g.rectangle(w, h, "black");
-    
-    let inner = g.rectangle(w, h, color);
-    healthBar.inner = inner;
-    healthBar.addChild(inner);
-
-    return healthBar;
-}
-
-function addHealthBar(obj, w, h, color){
-    let healthBar = new HealthBar(w, h, color);
-
-    obj.healthBar = healthBar;
-    obj.addChild(healthBar);
-    obj.putTop(healthBar);
-
-    
-    healthBar.update = function(){
-        let healthPercent = obj.health/obj.maxHealth;
-        obj.healthBar.inner.width = obj.healthBar.width * healthPercent;
-    } 
-}
 
 function Enemy(x, y){
     
@@ -287,8 +146,6 @@ function Enemy(x, y){
 
     let enemy = g.circle(15, "pink", "purple", 5, x, y);
 
-    addHealthBar(enemy, 40, 5, "red");
-
     enemy.speed = 2;
     enemy.health = 800;
     enemy.maxHealth = 800;
@@ -296,8 +153,10 @@ function Enemy(x, y){
     enemy.currentCheckpoint = 1;
     enemy.type = 'enemy';
     enemy.range = g.circle(30, "")
-    enemy.cooldown = new Cooldown(500);
     enemy.damage = 10;
+
+    enemy.healthBar = new Utils.HealthBar(enemy);
+    enemy.cooldown = new Utils.Cooldown(500);
 
     enemy.hitTower = function(tower) {
         if(enemy.cooldown.isReady())
@@ -312,7 +171,6 @@ function Enemy(x, y){
 
         activeTowers.forEach(tower => {
             if(g.hit(enemy, tower) && enemy.target != tower){
-                
                     enemy.target = tower;
             }
         })
@@ -326,7 +184,7 @@ function Enemy(x, y){
                 let nextTarget = checkpoints[enemy.currentCheckpoint + 1];
                 if(!nextTarget){
                     isAlive = false;
-                    lives--;
+                    loseLife();
                 } else {
                     enemy.currentCheckpoint++;
                     enemy.target = nextTarget;
@@ -339,10 +197,65 @@ function Enemy(x, y){
         }
         return isAlive;    
     }
-        
-
-
     return enemy;
+}
+
+function Tower(x, y, t){
+    let tower = g.circle(t.size, t.color, "black", 2, x-t.size/2, y-t.size/2);
+
+    tower.targets = [];
+    tower.maxHealth = t.health;
+    tower.health = t.health;
+    tower.damage = t.damage;
+    tower.shoot = t.shoot;
+    tower.type = "tower";
+    tower.shotCooldown = new Utils.Cooldown(t.fireRate);
+    tower.healthBar = new Utils.HealthBar(tower);
+    tower.range = addRange(tower, t.range);
+
+    console.log(tower.range)
+
+    tower.selectTarget = function() {
+        let target = this.targets[0];
+        if(target != null){
+            for(let i in this.targets){
+                // Find a target
+                //console.log(i);
+            }
+            this.shoot(target);
+        }
+        this.targets = [];
+    }
+
+    tower.shoot = function(enemy) {
+        if( this.shotCooldown.isReady()){
+            enemy.health -= this.damage;
+        }    
+    }
+
+
+    tower.update = function() {
+        this.healthBar.update();
+    }
+
+    return tower;
+}
+
+function addRange(target, r){
+    let range = g.circle(r, 'black');
+    range.alpha = 0.1;
+    target.addChild(range);
+    target.putCenter(range);
+    return range;
+}
+
+function loseLife(){
+    lives--;
+    if(lives < 0){
+        g.pause();
+        alert("Game Over!");
+        window.location.reload();
+    }
 }
 
 function play(){
@@ -351,17 +264,13 @@ function play(){
 
     activeTowers = activeTowers.filter(tower => {
         if(tower.health <= 0){
-            tower.bullets = tower.bullets.filter(b => {
-                g.remove(b);
-                return false;
-            });
             activeTowers.slice(activeTowers.indexOf(tower));
             g.remove(tower);
         } 
         return tower.health > 0;
     });
 
-    activeTowers.map(tower => tower.play());
+    activeTowers.map(tower => tower.update());
 
     checkEnemyCollision();
 
@@ -370,34 +279,18 @@ function play(){
         
         let isAlive = enemy.play();
        
+        if(enemy.health > 0) {
+            enemy.healthBar.update();
+        } else {
+            isAlive = false
+            gold += 50;
+        }
+
         activeTowers.forEach(tower => {
-            if(g.hit(tower.range, enemy)){
-
+            if(g.distance(tower, enemy) <= tower.range.radius){
                 tower.targets.push(enemy);
+                tower.selectTarget();
             }
-            tower.selectTarget();
-            tower.bullets = tower.bullets.filter(bullet => {
-                if(g.hit(enemy, bullet)){
-                    enemy.health -= tower.damage;
-
-                    if(enemy.health > 0) {
-                        enemy.healthBar.update();
-                    } else {
-                        isAlive = false
-                    }
-                    g.remove(bullet);
-
-                    return false;
-                }
-
-                // if(!g.hit(tower.range, bullet)){
-                // if(!g.hit(g.stage, bullet)){
-                if(g.distance(tower, bullet) > tower.range.radius){
-                    g.remove(bullet)
-                    return false
-                }
-                return true
-            })
         })
         if(!isAlive){
             try{
@@ -409,38 +302,32 @@ function play(){
         } 
         return isAlive
     })
-}
+
+    gui.updateInfo(lives, gold, score);
+} // /Play
 
 function checkEnemyCollision(){
     for(let i = 0; i < enemies.length; i++) {
         let e1 = enemies[i];
-
         for(let j = i+1; j < enemies.length; j++) {
             let e2 = enemies[j];
-
             if(g.hit(e1, e2)){
                 g.circleCollision(e2, e1);
             }
         }
     }
 }
-function createRange(range){
-    let r = g.circle(range, 'black');
-    r.alpha = 0.1;
-
-    return r;
-    
-}
 
 function SpawnEnemy(){
-
     if(spawner.length > 0){
-
-        let x = spawner.shift();
-
-        let enemy = new x();
-
-        enemies.push(enemy);
-
+        let enemy = spawner.shift();
+        enemies.push(new enemy);
     }
+}
+
+function pause(){
+    if(g.paused)
+        g.resume();
+    else 
+        g.pause();
 }

@@ -5,6 +5,7 @@
 
 html {
     background: #80dfff;
+    user-select: none;
 }
 
 body {
@@ -27,18 +28,6 @@ canvas {
     pointer-events: none;
   }
 
-  #ui table{
-      width: 100%;
-      padding: 10px;
-  }
-
-  #ui table tr{
-      text-align: center;
-      height: 75px;
-      background-color: beige;
-
-  }
-
   #left {
       background: green;
       height: 100%;
@@ -52,6 +41,19 @@ canvas {
       background: beige;
       margin: 10px;
       padding: 10px;
+  }
+
+  #left table{
+      width: 100%;
+      padding: 10px;
+  }
+
+  #left table tr{
+    cursor: pointer;
+      text-align: center;
+      height: 75px;
+      background-color: beige;
+
   }
 
   #right {
@@ -73,13 +75,36 @@ canvas {
       display: none;
   }
 
+  #right table{
+      width: 100%;
+      padding: 10px;
+  }
+
+  #right table tr{
+    cursor: pointer;
+      text-align: center;
+      height: 75px;
+      background-color: beige;
+
+  }
+
   #top{
       position: absolute;
       background: green;
       height: 5%;
       width: 80%;
       left: 10%;
-    
+  }
+
+  #top table{
+      padding: 10px;
+  }
+
+  #top td:nth-child(3)  {
+    padding: 0px 0px 0px 20px;
+  }
+  #top td:nth-child(5)  {
+    padding: 0px 0px 0px 20px;
   }
 
   #bottom{
@@ -89,5 +114,18 @@ canvas {
       width: 80%;
       left: 10%;
       bottom: 0;
+      pointer-events: all;
+     
     
+  }
+
+#options{
+    float: right;
+} 
+
+  #options td{
+    padding: 0px 20px;
+    background: beige;
+    border: 1px solid black;
+    cursor: pointer;
   }
