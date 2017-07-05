@@ -1,38 +1,33 @@
-// class Tower{
-//     constructor(x, y, tower, circle){
-//         this.x = x;
-//         this.y = y;
-//         this.type = "tower";
-//         this.targets = [];
-//         this.circle = circle;
-//         this.maxHealth = tower.health;
-//         this.health = tower.health;
-//         this.damage = tower.damage;
-//         this.shoot = tower.shoot;
-//         this.shotCooldown = new Utils.Cooldown(tower.fireRate);
-//         this.healthBar = new Utils.HealthBar(this);
-//         this.range = new Utils.Range(this, tower.range);
-//     }
+class Tower{
+    constructor(x, y, tower){
+        this.x = x;
+        this.y = y;
+        this.type = "tower";
+        this.targets = [];
+        this.enemies = [];
+        this.maxHealth = tower.health;
+        this.shotCooldown = new Utils.Cooldown(tower.fireRate);
 
-//     selectTarget(){
-//         let target = this.targets[0];
-//         if(target != null){
-//             for(let i in this.targets){
-//                 // Find a target
-//                 //console.log(i);
-//             }
-//             this.shoot(target);
-//         }
-//         this.targets = [];
-//     }
+        for(let key of Object.keys(tower))
+           this[key] = tower[key]
+    }
 
-//     shoot(enemy){
-//         if( this.shotCooldown.isReady()){
-//             enemy.health -= this.damage;
-//         }    
-//     }
+    selectTarget(){
+        let target = this.targets[0];
+        if(!!target){
+            for(let i in this.targets){
+                // Find a target
+                //console.log(i);
+            }
+            this.shoot(target);
+        }
+        this.targets = [];
+        this.enemies = [];
+    }
 
-//     update() {
-//         this.healthBar.update();
-//     }
-// }
+    shoot(enemy){
+        if(this.shotCooldown.isReady()){
+            enemy.health -= this.damage;
+        }    
+    }
+}
