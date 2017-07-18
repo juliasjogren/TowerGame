@@ -3,7 +3,7 @@ let gui = new GUI();
 // Globals
 let score = 0;
 let lives = 10;
-let gold = 1000;
+let gold = 1500;
 
 let spawner = [];
 let enemies = [];
@@ -13,14 +13,14 @@ let activeTowers = [];
 // DB
 let towers = {
     BombTower: {
-        fireRate: 1500, health: 700, range: 250, size: 40, damage: 500, color: "LawnGreen", price: 350,
+        fireRate: 1500, health: 700, range: 250, size: 40, damage: 350, color: "LawnGreen", price: 300,
         description: 'Blow your enemies brains out'
     },
     FireWall: {
-        fireRate: 250, health: 1000, range: 150, size: 20, damage: 50, color: "OrangeRed", price: 300,
+        fireRate: 250, health: 1000, range: 150, size: 20, damage: 50, color: "OrangeRed", price: 200,
         description: 'Burn your enemies to their death'
     },
-    ArrowTower: {
+    BlueberryTower: {
         fireRate: 50, health: 50, range: 50, size: 10, damage: 50, color: "blue", price: 50,
         description: 'uuuuu'
     }
@@ -50,8 +50,8 @@ function setup(){
     let spawnInterval = 700;
     let spawnEnemies = function(){
         if(spawner.length < 10){
-            spawner.push(Enemy);
-            spawner.push(Enemy);
+            spawner.push(makeEnemy);
+            spawner.push(makeEnemy);
         }
         g.wait(spawnInterval, spawnEnemies);
     }
@@ -59,13 +59,18 @@ function setup(){
     gui.setPauseCallback(pause);
 
     for(key in towers){
-        gui.makeTowerRow(key, towers[key]);
+        gui.makeTowerRow(key, towers[key], onTowerChange);
     }
 
     checkpoints.push(new Checkpoint(gameWidth * 0.2, gameHeight * 0.2));   
-    checkpoints.push(new Checkpoint(gameWidth * 0.8, gameHeight * 0.2));   
-    checkpoints.push(new Checkpoint(gameWidth * 0.2, gameHeight * 0.8));   
-    checkpoints.push(new Checkpoint(gameWidth * 0.2, gameHeight * 0.2));   
+
+    checkpoints.push(new Checkpoint(gameWidth * 0.6, gameHeight * 0.2));
+
+    checkpoints.push(new Checkpoint(gameWidth * 0.8, gameHeight * 0.5));
+
+    checkpoints.push(new Checkpoint(gameWidth * 0.6, gameHeight * 0.8));
+
+    checkpoints.push(new Checkpoint(gameWidth * 0.2, gameHeight * 0.8));
 
     drawLineBetweenCheckpoints(checkpoints);
 
@@ -74,28 +79,28 @@ function setup(){
     g.state = play;
 }
 
+let tempTower;
+function onTowerChange(tower){
+
+    selectedTower = tower;
+
+    if(!!tempTower)
+        g.remove(tempTower);
+
+    tempTower = g.circle(tower.size, tower.color, 'black', 1, 0, 0);
+    let range = g.circle(tower.range + tempTower.radius, 'black', 'black', 1);
+    range.alpha = 0.1;
+    tempTower.addChild(range);
+    tempTower.putCenter(range);
+
+    setInterval(()=>{tempTower.x = g.pointer.x-tempTower.radius/2;tempTower.y = g.pointer.y-tempTower.radius/2}, 50)
+}
+
 g.pointer.tap = () => {
 
     let {x, y} = g.pointer;
 
-    buildTower(x, y, selectedTower);
-}
-
-function buildTower(x, y, t){
-    if(!t) return statusLog('No tower selected.');
-    if(gold < t.price) return statusLog('Not enough gold.');
-
-    let tower = new Tower(x, y, t);
-    tower.circle = g.circle(t.size, t.color, 'black', 0, x-t.size/2, y-t.size/2);
-    tower.healthBar = new Utils.HealthBar(tower);
-
-    if(hitStartOrTower(tower.circle)){
-        statusLog('Bad placement.')
-        g.remove(tower.circle);
-    } else {
-        activeTowers.push(tower);
-        gold -= t.price;
-    }    
+    makeTower(x, y, selectedTower);
 }
 
 function hitStartOrTower(tower){
@@ -110,133 +115,24 @@ function hitStartOrTower(tower){
 g.start();
 
 function Checkpoint(x, y){
-    let checkpoint = {x:x, y:y};
-    checkpoint.circle = g.circle(0, 'black', 'black', 0, x, y);
-    checkpoint.circle.setPivot(0.5, 0.5);
-    checkpoint.type = 'checkpoint';
-
-    return checkpoint;
+    this.x = x;
+    this.y = y;
+    this.circle = g.circle(0, 'black', 'black', 0, x, y);
+    this.circle.setPivot(0.5, 0.5);
 }
 
 function drawLineBetweenCheckpoints(checkpoints){
     let prevCheckpoint = null;
 
-    checkpoints.forEach( checkpoint => {
+    checkpoints.forEach( (checkpoint, i) => {
         
-        let checkpointMarker = g.circle(102, '#CC9966', 'black', 0, checkpoint.x - 51, checkpoint.y - 51);
-
+        let checkpointMarker = g.circle(100, '#CC9966', 'black', 0, checkpoint.x - 50, checkpoint.y - 50);
 
         if(prevCheckpoint != null){
             g.line('#CC9966', 100, checkpoint.x, checkpoint.y, prevCheckpoint.x, prevCheckpoint.y);
         }
         prevCheckpoint = checkpoint;
     });
-}
-
-
-
-function Enemy(x, y){
-    
-    x = checkpoints[0].x;
-    y = checkpoints[0].y;
-
-    let enemy = {};
-
-    enemy.circle=  g.circle(15, "pink", "purple", 5, x, y);
-    enemy.speed = 2;
-    enemy.health = 800;
-    enemy.maxHealth = 800;
-    enemy.target = checkpoints[1];
-    enemy.currentCheckpoint = 1;
-    enemy.type = 'enemy';
-    enemy.range = 50;
-    enemy.damage = 10;
-
-    enemy.healthBar = new Utils.HealthBar(enemy);
-    enemy.cooldown = new Utils.Cooldown(500);
-
-    enemy.hitTower = function(tower) {
-        if(enemy.cooldown.isReady())
-            tower.health -= enemy.damage;
-        if(tower.health <= 0){
-            enemy.target = checkpoints[enemy.currentCheckpoint];
-        }
-    }
-
-    enemy.play = function() {
-
-        if(enemy.target.type != 'tower'){
-            activeTowers.forEach(tower => {
-                if(tower.enemies.length < 5 && isWithinRange(enemy, tower)){
-                    tower.enemies.push(enemy);
-                    enemy.target = tower;
-                }
-            })
-        }
-        
-        let isAlive = true;
-
-        let targetReached = isWithinRange(enemy, enemy.target)
-
-        if(targetReached){
-           
-            if(enemy.target.type === "checkpoint"){
-                let nextTarget = checkpoints[enemy.currentCheckpoint + 1];
-                if(!nextTarget){
-                    isAlive = false;
-                    loseLife();
-                } else {
-                    enemy.currentCheckpoint++;
-                    enemy.target = nextTarget;
-                }
-            } else {
-                enemy.hitTower(enemy.target);
-            }
-        } else {
-            g.followConstant(enemy.circle, enemy.target.circle, enemy.speed);
-        }
-        return isAlive;    
-    }
-    return enemy;
-}
-
-function TowerZ(x, y, t){
-    let tower = g.circle(t.size, t.color, "black", 2, x-t.size/2, y-t.size/2);
-
-    tower.targets = [];
-    tower.maxHealth = t.health;
-    tower.health = t.health;
-    tower.damage = t.damage;
-    tower.shoot = t.shoot;
-    tower.type = "tower";
-    tower.shotCooldown = new Utils.Cooldown(t.fireRate);
-    tower.healthBar = new Utils.HealthBar(tower);
-    tower.range = addRange(tower, t.range);
-
-    tower.selectTarget = function() {
-        let target = this.targets[0];
-        if(!!target){
-            for(let i in this.targets){
-                // Find a target
-                //console.log(i);
-            }
-            this.shoot(target);
-        }
-        this.targets = [];
-    }
-
-    tower.shoot = function(enemy) {
-        if( this.shotCooldown.isReady()){
-            enemy.health -= this.damage;
-        }    
-    }
-
-
-    tower.update = function() {
-        //this.healthBar.update();
-    }
-
-    return tower;
 }
 
 function addRange(target, r){
@@ -277,6 +173,8 @@ function play(){
        
         if(enemy.health <= 0) {
             isAlive = false
+            gold += 50;
+            score += 50;
         }
 
         activeTowers.forEach(tower => {
@@ -294,8 +192,6 @@ function play(){
             }catch(error){
                 console.log("g remove enemy error")
             }
-            gold += 50;
-            score += 50;
         } 
         return isAlive
     })
@@ -331,4 +227,88 @@ function pause(){
 
 function isWithinRange(o1, o2){
     return o1.range > g.distance(o1.circle, o2.circle);
+}
+
+function makeTower(x, y, t){
+    if(!t) return statusLog('No tower selected.');
+    if(gold < t.price) return statusLog('Not enough gold.');
+
+    let tower = new Tower(x, y, t);
+    tower.circle = g.circle(t.size, t.color, 'black', 1, x-t.size/2, y-t.size/2);
+    tower.healthBar = new Utils.HealthBar(tower);
+
+    if(hitStartOrTower(tower.circle)){
+        statusLog('Bad placement.')
+        g.remove(tower.circle);
+    } else {
+        activeTowers.push(tower);
+        gold -= t.price;
+    }    
+}
+
+function makeEnemy(){
+    
+    let x = checkpoints[0].x;
+    let y = checkpoints[0].y;
+
+    let randomizer = Math.random() * 4 + 1;
+
+    let enemyTemplate = {
+        speed: 1 * randomizer,
+        health: 800,
+        maxHealth: 800,
+        damage: 10,
+        size: 15 * randomizer,
+        range: 100
+    }
+
+    let enemy = new Enemy(x, y, enemyTemplate);
+
+    enemy.circle = g.circle(enemy.size, "pink", "black", 1, x-enemy.size/2, y-enemy.size/2);
+    enemy.target = checkpoints[1];
+    enemy.currentCheckpoint = 1;
+    enemy.healthBar = new Utils.HealthBar(enemy);
+    enemy.cooldown = new Utils.Cooldown(500);
+
+    enemy.hitTower = function(tower) {
+        if(enemy.cooldown.isReady())
+            tower.health -= enemy.damage;
+        if(tower.health <= 0){
+            enemy.target = checkpoints[enemy.currentCheckpoint];
+        }
+    }
+
+    enemy.play = function() {
+        if(!(enemy.target instanceof Tower)){
+            activeTowers.forEach(tower => {
+                if(tower.enemies.length < 5 && isWithinRange(enemy, tower)){
+                    tower.enemies.push(enemy);
+                    enemy.target = tower;
+                }
+            })
+        }
+        
+        let isAlive = true;
+
+        let targetReached = isWithinRange(enemy, enemy.target)
+
+        if(targetReached){
+            if(enemy.target instanceof Checkpoint){
+                let nextTarget = checkpoints[enemy.currentCheckpoint + 1];
+                if(!nextTarget){
+                    isAlive = false;
+                    loseLife();
+                } else {
+                    enemy.currentCheckpoint++;
+                    enemy.target = nextTarget;
+                }
+            } else {
+                enemy.hitTower(enemy.target);
+            }
+        } else {
+            g.followConstant(enemy.circle, enemy.target.circle, enemy.speed);
+        }
+        return isAlive;    
+    }
+    return enemy;
 }

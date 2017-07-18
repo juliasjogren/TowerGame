@@ -12,12 +12,14 @@ var Utils = {
     },
     
     HealthBar: function(target){
-        let color = target.type === "tower" ? "green" : "red";
+        let color = target instanceof Tower ? "green" : "red";
         let w = 40;
         let h = 5;
-        let healthBar = g.rectangle(w, h, "black");
+        let healthBar = g.rectangle(w, h, "black", "black", 1);
+        healthBar.visible = false;
         healthBar.alpha = 0.5;
-        let inner = g.rectangle(w, h, color);
+        let inner = g.rectangle(w, h, color, "black", 1);
+        inner.visible = false;
         healthBar.inner = inner;
         healthBar.addChild(inner);
         target.circle.addChild(healthBar);
@@ -26,6 +28,21 @@ var Utils = {
         healthBar.update = function(){
             let healthPercent = target.health/target.maxHealth;
             target.healthBar.inner.width = target.healthBar.width * healthPercent;
+
+            if(healthPercent === 1)
+                healthBar.hide();
+            else
+                healthBar.show();
+
+        }
+
+        healthBar.hide = function(){
+            healthBar.visible = false;
+            healthBar.inner.visible = false;
+        }
+        healthBar.show = function(){
+            healthBar.visible = true;
+            healthBar.inner.visible = true;
         }
 
         setInterval(healthBar.update, 100);

@@ -22,7 +22,7 @@ class GUI{
         this.htmlPause.onclick = cb;
     }
 
-    makeTowerRow(name, tower){
+    makeTowerRow(name, tower, onTowerChange){
         name = name.split(/(?=[A-Z])/g).join(" ");
 
         let row = this.htmlTowerList.insertRow();
@@ -45,7 +45,7 @@ class GUI{
         row.tower = tower;
 
         row.onclick = function(){
-            selectedTower = tower;
+            onTowerChange(tower);
         }
     }
 }

@@ -2,14 +2,13 @@ class Tower{
     constructor(x, y, tower){
         this.x = x;
         this.y = y;
-        this.type = "tower";
         this.targets = [];
         this.enemies = [];
         this.maxHealth = tower.health;
         this.shotCooldown = new Utils.Cooldown(tower.fireRate);
 
         for(let key of Object.keys(tower))
-           this[key] = tower[key]
+           this[key] = tower[key];
     }
 
     selectTarget(){
