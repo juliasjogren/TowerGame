@@ -1,21 +1,30 @@
 class GUI{
-    constructor(){
+    constructor(info){
         this.htmlTowerList = document.getElementById('towerList');
         this.htmlTowerTitle = document.getElementById('towerTitle');
         this.htmlOptionsButtons = document.getElementById('options').children[0].children[0].children;
         this.htmlPause = this.htmlOptionsButtons[0];
-        this.htmlRestart = this.htmlOptionsButtons[1]
+        this.htmlRestart = this.htmlOptionsButtons[1];
         this.htmlOptions = this.htmlOptionsButtons[2];
         this.htmlExit = this.htmlOptionsButtons[3];
         this.htmlLives = document.getElementById("lives");
+        console.log(this.htmlLives);
         this.htmlGold = document.getElementById("gold");
-        this.htmlScore = document.getElementById("score")
+        this.htmlScore = document.getElementById("score");
+        this.htmlStatus = document.getElementById("status");
+
+        this.info = info;
     }
 
-    updateInfo(lives, gold, score) {
-        this.htmlLives.innerHTML = lives;
-        this.htmlGold.innerHTML = gold;
-        this.htmlScore.innerHTML = score;
+    statusLog(...messages){
+        this.htmlStatus.innerHTML = messages.join(' ');
+        setTimeout(_ => this.htmlStatus.innerHTML = '', 10000);
+    }
+
+    updateInfo(l, g, s) {
+        this.htmlLives.innerHTML = l;
+        this.htmlGold.innerHTML = g;
+        this.htmlScore.innerHTML = s;
     }
 
     setPauseCallback(cb){

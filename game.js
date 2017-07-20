@@ -1,5 +1,3 @@
-let gui = new GUI();
-
 // Globals
 let score = 0;
 let lives = 10;
@@ -9,6 +7,8 @@ let spawner = [];
 let enemies = [];
 let checkpoints = [];
 let activeTowers = [];
+
+let gui = new GUI();
 
 // DB
 let towers = {
@@ -28,14 +28,7 @@ let towers = {
 
 let selectedTower;
 
-let htmlStatus = document.getElementById("status");
-
-function statusLog(...messages){
-    htmlStatus.innerHTML = messages.join(' ');
-    setTimeout(_ => htmlStatus.innerHTML = '', 5000);
-}
-
-statusLog('Starting!')
+gui.statusLog('Starting!')
 
 let gameWidth = document.documentElement.clientWidth;
 let gameHeight = document.documentElement.clientHeight;
@@ -62,15 +55,10 @@ function setup(){
         gui.makeTowerRow(key, towers[key], onTowerChange);
     }
 
-    checkpoints.push(new Checkpoint(gameWidth * 0.2, gameHeight * 0.2));   
-
-    checkpoints.push(new Checkpoint(gameWidth * 0.6, gameHeight * 0.2));
-
-    checkpoints.push(new Checkpoint(gameWidth * 0.8, gameHeight * 0.5));
-
-    checkpoints.push(new Checkpoint(gameWidth * 0.6, gameHeight * 0.8));
-
-    checkpoints.push(new Checkpoint(gameWidth * 0.2, gameHeight * 0.8));
+    for(key in ATLAS.Elves.t2){
+        let c = ATLAS.Elves.t2[key];
+        checkpoints.push(new Checkpoint(gameWidth * c.x, gameHeight * c.y));   
+    }
 
     drawLineBetweenCheckpoints(checkpoints);
 
@@ -129,6 +117,7 @@ function drawLineBetweenCheckpoints(checkpoints){
         let checkpointMarker = g.circle(100, '#CC9966', 'black', 0, checkpoint.x - 50, checkpoint.y - 50);
 
         if(prevCheckpoint != null){
+            checkpointMarker.color = 'white';
             g.line('#CC9966', 100, checkpoint.x, checkpoint.y, prevCheckpoint.x, prevCheckpoint.y);
         }
         prevCheckpoint = checkpoint;
@@ -219,10 +208,14 @@ function SpawnEnemy(){
 }
 
 function pause(){
-    if(g.paused)
+    if(g.paused){
         g.resume();
-    else 
+        gui.statusLog('Unpaused');
+    }
+    else {
         g.pause();
+        gui.statusLog('Paused');
+    }
 }
 
 function isWithinRange(o1, o2){
@@ -230,15 +223,15 @@ function isWithinRange(o1, o2){
 }
 
 function makeTower(x, y, t){
-    if(!t) return statusLog('No tower selected.');
-    if(gold < t.price) return statusLog('Not enough gold.');
+    if(!t) return gui.statusLog('No tower selected.');
+    if(gold < t.price) return gui.statusLog('Not enough gold.');
 
     let tower = new Tower(x, y, t);
     tower.circle = g.circle(t.size, t.color, 'black', 1, x-t.size/2, y-t.size/2);
     tower.healthBar = new Utils.HealthBar(tower);
 
     if(hitStartOrTower(tower.circle)){
-        statusLog('Bad placement.')
+        gui.statusLog('Bad placement.')
         g.remove(tower.circle);
     } else {
         activeTowers.push(tower);
@@ -251,7 +244,7 @@ function makeEnemy(){
     let x = checkpoints[0].x;
     let y = checkpoints[0].y;
 
-    let randomizer = Math.random() * 4 + 1;
+    let randomizer = Math.random() * 3 + 1;
 
     let enemyTemplate = {
         speed: 1 * randomizer,

@@ -11,22 +11,24 @@ class Tower{
            this[key] = tower[key];
     }
 
-    selectTarget(){
-        let target = this.targets[0];
-        if(!!target){
-            for(let i in this.targets){
-                // Find a target
-                //console.log(i);
-            }
-            this.shoot(target);
-        }
-        this.targets = [];
-        this.enemies = [];
-    }
 
-    shoot(enemy){
-        if(this.shotCooldown.isReady()){
-            enemy.health -= this.damage;
-        }    
+}
+Tower.prototype.selectTarget = function(){
+    let target = this.targets[0];
+    if(!!target){
+        for(let i in this.targets){
+            // Find a target
+            //console.log(i);
+        }
+        this.shoot(target);
     }
+    this.targets = [];
+    this.enemies = [];
+}
+
+
+Tower.prototype.shoot = function(enemy){
+    if(this.shotCooldown.isReady()){
+        enemy.health -= this.damage;
+    }    
 }
