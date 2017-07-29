@@ -1,18 +1,33 @@
-class Tower{
-    constructor(x, y, tower){
-        this.x = x;
-        this.y = y;
-        this.targets = [];
-        this.enemies = [];
-        this.maxHealth = tower.health;
-        this.shotCooldown = new Utils.Cooldown(tower.fireRate);
+class Tower extends Entity {
+    constructor(template){
+        super(template);
 
-        for(let key of Object.keys(tower))
-           this[key] = tower[key];
+        this.shotCooldown = new Utils.Cooldown(this.fireRate);
     }
-
-
 }
+
+Tower.prototype.enemies = [];
+Tower.prototype.targets = [];
+
+
+Tower.prototype.play = function(){
+    this.cleanEnemyList();
+}
+
+Tower.prototype.cleanEnemyList = function(){
+    let newEnemies = []
+    for(let i = 0; i < this.enemies.length; i++){
+        let enemy = this.enemies[i];
+
+        if(!enemy.circle){
+//            console.log('Removing dead enemy!')
+        } else {
+            newEnemies.push(enemy);
+        }
+    }
+    this.enemies = newEnemies;
+}
+
 Tower.prototype.selectTarget = function(){
     let target = this.targets[0];
     if(!!target){
@@ -23,9 +38,7 @@ Tower.prototype.selectTarget = function(){
         this.shoot(target);
     }
     this.targets = [];
-    this.enemies = [];
 }
-
 
 Tower.prototype.shoot = function(enemy){
     if(this.shotCooldown.isReady()){

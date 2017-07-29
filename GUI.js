@@ -1,5 +1,5 @@
 class GUI{
-    constructor(info){
+    constructor(){
         this.htmlTowerList = document.getElementById('towerList');
         this.htmlTowerTitle = document.getElementById('towerTitle');
         this.htmlOptionsButtons = document.getElementById('options').children[0].children[0].children;
@@ -8,12 +8,11 @@ class GUI{
         this.htmlOptions = this.htmlOptionsButtons[2];
         this.htmlExit = this.htmlOptionsButtons[3];
         this.htmlLives = document.getElementById("lives");
-        console.log(this.htmlLives);
         this.htmlGold = document.getElementById("gold");
         this.htmlScore = document.getElementById("score");
         this.htmlStatus = document.getElementById("status");
 
-        this.info = info;
+        this.statusLog('GUI Starting!');
     }
 
     statusLog(...messages){
@@ -43,6 +42,7 @@ class GUI{
         let image = document.createElement('img');
         image.width = 50;
         image.height = 50;
+        image.style.background = tower.color;
         cell1.appendChild(image);
 
         let cell2 = row.insertCell(1);

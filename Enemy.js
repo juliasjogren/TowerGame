@@ -1,9 +1,9 @@
-class Enemy{
-    constructor(x, y, e){
-        this.x = x;
-        this.y = y;
+class Enemy extends Entity {
+    constructor(template){
+        super(template);
 
-        for(let key of Object.keys(e))
-            this[key] = e[key];
+        this.speed = template.speed;
     }
 }
+
+Enemy.prototype.speed = 0;

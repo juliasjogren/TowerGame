@@ -56,5 +56,5 @@ var Utils = {
         range.alpha = 0.1;
         target.putCenter(range);
         return range;
-    }
+    },
 }

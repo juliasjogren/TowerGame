@@ -7,28 +7,9 @@ let spawner = [];
 let enemies = [];
 let checkpoints = [];
 let activeTowers = [];
-
-let gui = new GUI();
-
-// DB
-let towers = {
-    BombTower: {
-        fireRate: 1500, health: 700, range: 250, size: 40, damage: 350, color: "LawnGreen", price: 300,
-        description: 'Blow your enemies brains out'
-    },
-    FireWall: {
-        fireRate: 250, health: 1000, range: 150, size: 20, damage: 50, color: "OrangeRed", price: 200,
-        description: 'Burn your enemies to their death'
-    },
-    BlueberryTower: {
-        fireRate: 50, health: 50, range: 50, size: 10, damage: 50, color: "blue", price: 50,
-        description: 'uuuuu'
-    }
-};
-
 let selectedTower;
 
-gui.statusLog('Starting!')
+let gui = new GUI();
 
 let gameWidth = document.documentElement.clientWidth;
 let gameHeight = document.documentElement.clientHeight;
@@ -39,24 +20,30 @@ function setup(){
     console.log('Starting setup');
     g.scaleToWindow();
     g.backgroundColor = '#004d00';
+    g.FPS = 30;
 
-    let spawnInterval = 700;
+    let spawnIntervalMillis = 2500;
     let spawnEnemies = function(){
-        if(spawner.length < 10){
-            spawner.push(makeEnemy);
-            spawner.push(makeEnemy);
-        }
-        g.wait(spawnInterval, spawnEnemies);
+
+        spawner.push(makeEnemy);
+        spawner.push(makeEnemy);
+
+        if(spawnIntervalMillis < 750)
+            spawnIntervalMillis = 750;
+        else
+            spawnIntervalMillis -= 50;
+
+        g.wait(spawnIntervalMillis, spawnEnemies);
     }
     
     gui.setPauseCallback(pause);
 
-    for(key in towers){
-        gui.makeTowerRow(key, towers[key], onTowerChange);
+    for(let key in GAMEDATA.towers){
+        gui.makeTowerRow(key, GAMEDATA.towers[key], onTowerChange);
     }
-
-    for(key in ATLAS.Elves.t2){
-        let c = ATLAS.Elves.t2[key];
+    
+    for(let key in GAMEDATA.atlas.Elves.t2){
+        let c = GAMEDATA.atlas.Elves.t2[key];
         checkpoints.push(new Checkpoint(gameWidth * c.x, gameHeight * c.y));   
     }
 
@@ -67,21 +54,20 @@ function setup(){
     g.state = play;
 }
 
-let tempTower;
 function onTowerChange(tower){
 
     selectedTower = tower;
 
-    if(!!tempTower)
-        g.remove(tempTower);
+    if(!!selectedTower.circle)
+        g.remove(selectedTower.circle);
 
-    tempTower = g.circle(tower.size, tower.color, 'black', 1, 0, 0);
-    let range = g.circle(tower.range + tempTower.radius, 'black', 'black', 1);
+    selectedTower.circle = g.circle(tower.size, tower.color, 'black', 1, 0, 0);
+    let range = g.circle(tower.range + selectedTower.circle.radius, 'black', 'black', 1);
     range.alpha = 0.1;
-    tempTower.addChild(range);
-    tempTower.putCenter(range);
+    selectedTower.circle.addChild(range);
+    selectedTower.circle.putCenter(range);
 
-    setInterval(()=>{tempTower.x = g.pointer.x-tempTower.radius/2;tempTower.y = g.pointer.y-tempTower.radius/2}, 50)
+    setInterval(()=>{selectedTower.circle.x = g.pointer.x-selectedTower.circle.radius/2;selectedTower.circle.y = g.pointer.y-selectedTower.circle.radius/2}, 50)
 }
 
 g.pointer.tap = () => {
@@ -146,10 +132,11 @@ function play(){
     SpawnEnemy();
 
     activeTowers = activeTowers.filter(tower => {
+        tower.play();
         if(tower.health <= 0){
             activeTowers.slice(activeTowers.indexOf(tower));
             g.remove(tower.circle);
-        } 
+        }
         return tower.health > 0;
     });
 
@@ -167,7 +154,7 @@ function play(){
         }
 
         activeTowers.forEach(tower => {
-            if(isWithinRange(tower, enemy)){
+            if(isWithinRange(tower, enemy, tower.range)){
                 tower.targets.push(enemy);
                 tower.selectTarget();
                 if(g.hit(tower.circle, enemy.circle)){
@@ -177,9 +164,11 @@ function play(){
         })
         if(!isAlive){
             try{
-                g.remove(enemy.circle)
+                g.remove(enemy.circle);
             }catch(error){
                 console.log("g remove enemy error")
+            } finally {
+                enemy.circle = undefined;
             }
         } 
         return isAlive
@@ -204,6 +193,7 @@ function SpawnEnemy(){
     if(spawner.length > 0){
         let enemy = spawner.shift();
         enemies.push(new enemy);
+//        enemies.push(Object.create(Enemy, enemy));
     }
 }
 
@@ -218,16 +208,16 @@ function pause(){
     }
 }
 
-function isWithinRange(o1, o2){
-    return o1.range > g.distance(o1.circle, o2.circle);
+function isWithinRange(o1, o2, dist){
+    return dist > g.distance(o1.circle, o2.circle);
 }
 
-function makeTower(x, y, t){
-    if(!t) return gui.statusLog('No tower selected.');
-    if(gold < t.price) return gui.statusLog('Not enough gold.');
+function makeTower(x, y, towerTemplate){
+    if(!towerTemplate) return gui.statusLog('No tower selected.');
+    if(gold < towerTemplate.gold) return gui.statusLog('Not enough gold.');
 
-    let tower = new Tower(x, y, t);
-    tower.circle = g.circle(t.size, t.color, 'black', 1, x-t.size/2, y-t.size/2);
+    let tower = new Tower(towerTemplate);
+    tower.circle = g.circle(towerTemplate.size, towerTemplate.color, 'black', 1, x-towerTemplate.size/2, y-towerTemplate.size/2);
     tower.healthBar = new Utils.HealthBar(tower);
 
     if(hitStartOrTower(tower.circle)){
@@ -235,8 +225,23 @@ function makeTower(x, y, t){
         g.remove(tower.circle);
     } else {
         activeTowers.push(tower);
-        gold -= t.price;
+        gold -= towerTemplate.gold;
+        //g.remove(selectedTower.circle);
+        //selectedTower = undefined;
     }    
+}
+
+function getRandomEnemyTemplate() {
+    let enemyNames = Object.keys(GAMEDATA.enemies)
+    let enemyCount = enemyNames.length;
+    // let randomEnemyNumber = Math.floor(Math.random() * enemyCount); // This should be quite random
+    let randomNumber = Math.random();
+    let randomEnemyNumber = randomNumber >= 0.95 ? 3
+                            : randomNumber >= 0.9 ? 2
+                            : randomNumber >= 0.8 ? 1
+                            : 0;
+    let randomEnemy = enemyNames[randomEnemyNumber];
+    return GAMEDATA.enemies[randomEnemy];
 }
 
 function makeEnemy(){
@@ -244,20 +249,11 @@ function makeEnemy(){
     let x = checkpoints[0].x;
     let y = checkpoints[0].y;
 
-    let randomizer = Math.random() * 3 + 1;
+    let randomEnemy = getRandomEnemyTemplate();
 
-    let enemyTemplate = {
-        speed: 1 * randomizer,
-        health: 800,
-        maxHealth: 800,
-        damage: 10,
-        size: 15 * randomizer,
-        range: 100
-    }
+    let enemy = new Enemy(randomEnemy);
 
-    let enemy = new Enemy(x, y, enemyTemplate);
-
-    enemy.circle = g.circle(enemy.size, "pink", "black", 1, x-enemy.size/2, y-enemy.size/2);
+    enemy.circle = g.circle(enemy.size, enemy.color, "black", 1, x-enemy.size/2, y-enemy.size/2);
     enemy.target = checkpoints[1];
     enemy.currentCheckpoint = 1;
     enemy.healthBar = new Utils.HealthBar(enemy);
@@ -272,36 +268,37 @@ function makeEnemy(){
     }
 
     enemy.play = function() {
-        if(!(enemy.target instanceof Tower)){
+
+        if(enemy.target instanceof Checkpoint){
             activeTowers.forEach(tower => {
-                if(tower.enemies.length < 5 && isWithinRange(enemy, tower)){
+                if(tower.enemies.length <= 5 && isWithinRange(enemy, tower, enemy.range)){
                     tower.enemies.push(enemy);
                     enemy.target = tower;
+                    return;
                 }
             })
-        }
-        
-        let isAlive = true;
 
-        let targetReached = isWithinRange(enemy, enemy.target)
-
-        if(targetReached){
-            if(enemy.target instanceof Checkpoint){
+            if(isWithinRange(enemy, enemy.target, 25)){
                 let nextTarget = checkpoints[enemy.currentCheckpoint + 1];
                 if(!nextTarget){
-                    isAlive = false;
                     loseLife();
+                    return false;
                 } else {
                     enemy.currentCheckpoint++;
                     enemy.target = nextTarget;
                 }
-            } else {
-                enemy.hitTower(enemy.target);
             }
         } else {
-            g.followConstant(enemy.circle, enemy.target.circle, enemy.speed);
+
+            if(isWithinRange(enemy, enemy.target, enemy.range)){
+                enemy.hitTower(enemy.target);
+            } else {
+                g.followConstant(enemy.circle, enemy.target.circle, enemy.speed);
+            }
         }
-        return isAlive;    
+                    g.followConstant(enemy.circle, enemy.target.circle, enemy.speed);
+
+        return true;    
     }
     return enemy;
 }
